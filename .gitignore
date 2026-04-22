@@ -1,11 +1,12 @@
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-.venv/
-venv/
-.env
-*.egg-info/
+# Java / Maven
+target/
+*.class
+*.jar
+*.war
+*.ear
+.mvn/
+!.mvn/wrapper/maven-wrapper.jar
+HELP.md
 
 # Node / Frontend
 node_modules/
