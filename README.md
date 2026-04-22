@@ -1,82 +1,73 @@
 # ProjetoCamadaNegocios
 
-Plataforma de aluguel de imóveis por temporada — clone didático do Airbnb — desenvolvida com **Flask** e **MongoDB**.
-
----
-
-## Funcionalidades
-
-| Recurso | Detalhes |
-|---|---|
-| Login | Autenticação por email/senha com hash bcrypt (werkzeug) |
-| Busca de imóveis | Filtro por cidade e preço máximo por noite |
-| Disponibilidade | Visualização de períodos ocupados por imóvel |
-| Reserva | Criação com verificação de conflito de datas |
-| Painel | Listagem de reservas como hóspede e anfitrião |
-| Anúncio | Cadastro de novo imóvel (perfis `anfitriao` e `ambos`) |
+Plataforma de aluguel de imóveis por temporada — clone didático do Airbnb — desenvolvida com **Flask**, **MongoDB** e **React + Vite**.
 
 ---
 
 ## Tecnologias
 
-- **Backend:** Python 3.10+ + Flask 3.x
-- **Banco de dados:** MongoDB (coleções: `usuarios`, `locais`, `reservas`)
-- **Frontend:** HTML + CSS + JavaScript puro (sem frameworks)
+- **Backend:** Python 3.10+ · Flask 3.x · MongoDB
+- **Frontend:** React 19 · Vite · Tailwind CSS · React Router
 
 ---
 
-## ⚡ Setup rápido no Windows
+## Pré-requisitos
 
-### 1. Instalar dependências
+- [Python 3.10+](https://www.python.org/downloads/) — marque **"Add Python to PATH"**
+- [Node.js 18+](https://nodejs.org/)
+- [MongoDB Community](https://www.mongodb.com/try/download/community) — ou use o WSL (veja abaixo)
 
-Abra o **PowerShell** ou **Prompt de Comando** na pasta do projeto e execute:
+---
 
-```bat
-setup.bat
+## Como rodar (desenvolvimento)
+
+Você precisará de **dois terminais abertos** ao mesmo tempo.
+
+### Terminal 1 — Backend Flask
+
+```powershell
+# Na raiz do projeto
+pip install -r requirements.txt
+python app.py
 ```
 
-> Se o Python não for encontrado, [baixe aqui](https://www.python.org/downloads/) e marque **"Add Python to PATH"** durante a instalação.
+Roda em **http://localhost:5000**
 
-### 2. Instalar o MongoDB
+### Terminal 2 — Frontend React
 
-Baixe e instale o **MongoDB Community Edition**:  
-👉 https://www.mongodb.com/try/download/community
+```powershell
+cd FrontEnd
+npm install
+npm run dev
+```
 
-Após a instalação, o MongoDB inicia automaticamente como serviço do Windows.
+Acesse **http://localhost:5173** no navegador.
 
-### 3. Iniciar o servidor
+> O Vite redireciona automaticamente as chamadas `/api` para o Flask na porta 5000.
 
-```bat
-start.bat
+---
+
+## Como rodar (produção)
+
+Gere o build do frontend e sirva tudo pelo Flask:
+
+```powershell
+cd FrontEnd
+npm run build
+cd ..
+python app.py
 ```
 
 Acesse **http://localhost:5000** no navegador.
 
 ---
 
-## Setup manual (qualquer sistema)
+## MongoDB no WSL (Linux)
+
+Se preferir rodar o MongoDB via WSL em vez de instalar no Windows:
 
 ```bash
-# Criar e ativar ambiente virtual
-python -m venv venv
-venv\Scripts\activate       # Windows
-source venv/bin/activate    # Linux/Mac
-
-# Instalar dependências
-pip install -r requirements.txt
-
-# Iniciar
-python app.py
-```
-
-Se o MongoDB estiver em outro endereço:
-
-```bash
-# Windows PowerShell
-$env:MONGO_URI="mongodb://192.168.1.10:27017/"; python app.py
-
-# Linux/Mac
-MONGO_URI="mongodb://192.168.1.10:27017/" python app.py
+sudo service mongod start
 ```
 
 ---
@@ -95,13 +86,26 @@ O banco é populado automaticamente na primeira requisição.
 
 ---
 
+## Funcionalidades
+
+| Recurso | Detalhes |
+|---|---|
+| Login | Autenticação por email/senha com hash bcrypt |
+| Busca de imóveis | Filtro por cidade e preço máximo |
+| Reserva | Criação com verificação de conflito de datas |
+| Disponibilidade | Visualização de períodos ocupados |
+| Dashboard | Reservas como hóspede e imóveis como anfitrião |
+| Anúncio | Cadastro de novo imóvel (perfis `anfitriao` e `ambos`) |
+
+---
+
 ## API REST
 
 | Método | Endpoint | Descrição |
 |---|---|---|
 | `POST` | `/api/login` | Autenticar usuário |
-| `GET` | `/api/locais` | Listar imóveis (filtros: `cidade`, `preco_max`, `anfitriao_id`) |
+| `GET` | `/api/locais` | Listar imóveis (`cidade`, `preco_max`, `anfitriao_id`) |
 | `POST` | `/api/locais` | Cadastrar imóvel |
-| `GET` | `/api/locais/<id>/ocupacao` | Períodos ocupados de um imóvel |
-| `GET` | `/api/reservas` | Listar reservas (filtros: `hospede_id`, `anfitriao_id`, `status`) |
-| `POST` | `/api/reservas` | Criar reserva (valida conflito de datas) |
+| `GET` | `/api/locais/<id>/ocupacao` | Períodos ocupados |
+| `GET` | `/api/reservas` | Listar reservas (`hospede_id`, `anfitriao_id`, `status`) |
+| `POST` | `/api/reservas` | Criar reserva |
