@@ -16,18 +16,14 @@ MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
 client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
 db = client["airbnb_clone"]
 
-
 def get_database():
     client.admin.command("ping")
     ensure_seed_data(db)
     return db
 
-
 def para_data(data_str):
-    # Converte a string para data e já define como UTC
     dt = datetime.strptime(data_str, "%Y-%m-%d")
     return dt.replace(tzinfo=timezone.utc)
-
 
 def parse_object_id(value, field_name):
     try:
@@ -35,15 +31,9 @@ def parse_object_id(value, field_name):
     except (InvalidId, TypeError):
         raise ValueError(f"{field_name} invalido.")
 
-
-# [MUDANÇA 2] Função para simular a extração de ID de um Token JWT.
-# Em produção, o ID do usuário NUNCA vem do JSON da requisição, mas sim do Token de Autenticação.
 def obter_usuario_autenticado():
-    # Aqui simulamos passando o ID em um Header personalizado.
-    # Se você usar o flask_jwt_extended no futuro, usaria: get_jwt_identity()
     user_id = request.headers.get("X-User-Id")
     
-    # Fallback temporário para o payload (apenas para não quebrar seus testes atuais no Postman/FrontEnd)
     if not user_id and request.is_json:
         dados = request.get_json(silent=True) or {}
         user_id = dados.get("hospede_id") or dados.get("anfitriao_id")
@@ -53,7 +43,6 @@ def obter_usuario_autenticado():
     
     return parse_object_id(user_id, "usuario_autenticado")
 
-
 def serialize_user(usuario):
     return {
         "id": str(usuario["_id"]),
@@ -61,7 +50,6 @@ def serialize_user(usuario):
         "email": usuario["email"],
         "tipo": usuario["tipo"],
     }
-
 
 def serialize_local(local, anfitrioes=None):
     anfitriao = (anfitrioes or {}).get(local["anfitriao_id"])
@@ -81,7 +69,6 @@ def serialize_local(local, anfitrioes=None):
         "data_cadastro": local.get("data_cadastro", datetime.now(timezone.utc)).strftime("%Y-%m-%d"),
     }
 
-
 def serialize_reserva(reserva, local=None):
     dados = reserva["datas"]
     resposta = {
@@ -98,7 +85,6 @@ def serialize_reserva(reserva, local=None):
         resposta["local"] = serialize_local(local)
     return resposta
 
-
 @app.errorhandler(PyMongoError)
 def handle_mongo_error(error):
     return jsonify(
@@ -108,11 +94,9 @@ def handle_mongo_error(error):
         }
     ), 503
 
-
 @app.errorhandler(ValueError)
 def handle_value_error(error):
     return jsonify({"erro": str(error)}), 400
-
 
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
@@ -121,7 +105,6 @@ def serve_frontend(path):
     if path and os.path.exists(os.path.join(dist, path)):
         return send_from_directory(dist, path)
     return send_from_directory(dist, "index.html")
-
 
 @app.route("/api/login", methods=["POST"])
 def login():
@@ -139,7 +122,6 @@ def login():
 
     return jsonify({"usuario": serialize_user(usuario)})
 
-
 @app.route("/api/locais", methods=["GET", "POST"])
 def locais():
     database = get_database()
@@ -147,7 +129,6 @@ def locais():
     if request.method == "POST":
         dados = request.get_json(silent=True) or {}
         
-        # [MUDANÇA 2] Pegando o ID pela função de autenticação, não pelo payload cru
         anfitriao_id = obter_usuario_autenticado()
 
         for campo in ("titulo", "descricao", "preco_por_noite", "endereco"):
@@ -172,11 +153,9 @@ def locais():
                 "cidade": endereco["cidade"].strip(),
                 "estado": endereco["estado"].strip(),
                 "pais": endereco["pais"].strip(),
-                # [MUDANÇA 3] Campo extra em minúsculo dedicado apenas para busca indexada rápida
                 "cidade_busca": endereco["cidade"].strip().lower() 
             },
             "comodidades": [item.strip() for item in dados.get("comodidades", []) if item.strip()],
-            # [MUDANÇA 5] Usando UTC para salvar a data, evitando problemas de fuso horário
             "data_cadastro": datetime.now(timezone.utc),
         }
 
@@ -190,14 +169,12 @@ def locais():
 
     filtro = {}
     if cidade:
-        # [MUDANÇA 3] Busca exata direta usando o campo padronizado, sem usar Regex lenta
         filtro["endereco.cidade_busca"] = cidade.lower()
     if preco_max:
         filtro["preco_por_noite"] = {"$lte": float(preco_max)}
     if anfitriao_id_query:
         filtro["anfitriao_id"] = parse_object_id(anfitriao_id_query, "anfitriao_id")
 
-    # [MUDANÇA 1] Implementação de Paginação nos parâmetros da URL
     pagina = int(request.args.get("pagina", 1))
     limite = int(request.args.get("limite", 20))
     pulos = (pagina - 1) * limite
@@ -216,7 +193,6 @@ def locais():
     }
     return jsonify([serialize_local(local, anfitrioes) for local in locais_encontrados])
 
-
 @app.route("/api/reservas", methods=["GET", "POST"])
 def reservas():
     database = get_database()
@@ -225,7 +201,6 @@ def reservas():
         dados = request.get_json(silent=True) or {}
         local_id = parse_object_id(dados.get("local_id"), "local_id")
         
-        # [MUDANÇA 2] Validando autoria pelo usuário autenticado
         hospede_id = obter_usuario_autenticado()
         
         checkin = para_data(dados.get("checkin", ""))
@@ -253,9 +228,6 @@ def reservas():
             "data_reserva": datetime.now(timezone.utc),
         }
 
-        # [MUDANÇA 4] Race Condition Pattern
-        # Em produção com Replica Set, englobamos o select e o insert em uma Transaction.
-        # Caso o servidor local não suporte transação, fazemos o fallback automático.
         conflito_query = {
             "local_id": local_id,
             "status": "confirmada",
@@ -264,7 +236,6 @@ def reservas():
         }
 
         try:
-            # Tenta usar a sessão transacional (Padrão Ouro para evitar Race Condition)
             with client.start_session() as session:
                 with session.start_transaction():
                     conflito = database.reservas.find_one(conflito_query, session=session)
@@ -272,7 +243,6 @@ def reservas():
                         return jsonify({"erro": "Este local ja esta reservado para estas datas."}), 409
                     resultado = database.reservas.insert_one(nova_reserva, session=session)
         except OperationFailure:
-            # Fallback para ambiente de desenvolvimento local (Standalone sem Replica Set)
             conflito = database.reservas.find_one(conflito_query)
             if conflito:
                 return jsonify({"erro": "Este local ja esta reservado para estas datas."}), 409
@@ -304,7 +274,6 @@ def reservas():
             return jsonify([])
         filtro["local_id"] = {"$in": local_ids}
 
-    # [MUDANÇA 1] Paginação para as reservas
     pagina = int(request.args.get("pagina", 1))
     limite = int(request.args.get("limite", 20))
     pulos = (pagina - 1) * limite
@@ -321,7 +290,6 @@ def reservas():
         local["_id"]: local for local in database.locais.find({"_id": {"$in": list(local_ids)}})
     }
     return jsonify([serialize_reserva(reserva, locais.get(reserva["local_id"])) for reserva in reservas_encontradas])
-
 
 @app.route("/api/locais/<id>/ocupacao", methods=["GET"])
 def consultar_ocupacao(id):
@@ -345,7 +313,6 @@ def consultar_ocupacao(id):
         )
 
     return jsonify(datas_bloqueadas)
-
 
 if __name__ == "__main__":
     app.run(debug=True)
