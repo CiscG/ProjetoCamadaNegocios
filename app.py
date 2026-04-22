@@ -144,7 +144,6 @@ def locais():
             if not endereco.get(campo):
                 raise ValueError(f"Endereco incompleto. Campo obrigatorio: {campo}.")
 
-        # --- NOVA REGRA DE NEGÓCIO: BARRAR DUPLICATAS ---
         titulo_limpo = dados["titulo"].strip()
         cidade_limpa = endereco["cidade"].strip()
 
@@ -155,9 +154,7 @@ def locais():
         })
 
         if imovel_duplicado:
-            # Retorna um erro 409 Conflict se achar um igual
             return jsonify({"erro": f"Você já possui um imóvel chamado '{titulo_limpo}' cadastrado em {cidade_limpa}."}), 409
-        # ------------------------------------------------
 
         novo_local = {
             "anfitriao_id": anfitriao_id,
@@ -197,8 +194,8 @@ def locais():
     locais_encontrados = list(
         database.locais.find(filtro)
         .sort("data_cadastro", -1)
-        .skip(pulos) # Pula os registros das páginas anteriores
-        .limit(limite) # Traz apenas a quantidade limite
+        .skip(pulos) 
+        .limit(limite) 
     )
 
     anfitriao_ids = {local["anfitriao_id"] for local in locais_encontrados}
@@ -239,7 +236,6 @@ def reservas():
             "datas": {"checkin": checkin, "checkout": checkout},
             "valor_total": float(local["preco_por_noite"]) * noites,
             "status": "confirmada",
-            # [MUDANÇA 5] Data em UTC
             "data_reserva": datetime.now(timezone.utc),
         }
 
