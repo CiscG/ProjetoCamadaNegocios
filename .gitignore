@@ -2,6 +2,21 @@
 target/
 *.class
 *.jar
+.mvn/
+
+# Python
+venv/
+__pycache__/
+*.py[cod]
+
+# IDEs e Sistema
+.vscode/
+.idea/
+.DS_Store
+# Java / Maven
+target/
+*.class
+*.jar
 *.war
 *.ear
 .mvn/
